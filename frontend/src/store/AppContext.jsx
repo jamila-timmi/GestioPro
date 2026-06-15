@@ -25,10 +25,13 @@ export const AppProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setAuth({ user: null, loading: false, error: null });
-  };
+  const logout = async () => {
+  try {
+    await api.post('/auth/logout');  
+  } catch {}
+  localStorage.removeItem('token'); 
+  setAuth({ user: null, loading: false, error: null });
+};
 
   const fetchMe = useCallback(async () => {
     try {

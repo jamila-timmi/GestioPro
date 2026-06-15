@@ -271,11 +271,12 @@ const Absences = () => {
                 <thead>
                   <tr>
                     {estAdmin && 
-                    <th>Employé</th>}
-                    <th>Déclarée par</th>
-                    <th>Date</th>
-                    <th>Motif</th>
-                    <th>Statut</th><th>Justificatif</th>
+                        <th>Employé</th>}
+                        <th>Déclarée par</th>
+                        <th>Date</th>
+                        <th>Motif</th>
+                        <th>Statut</th>
+                        <th>Justificatif</th>
                     {estAdmin && <th>Actions</th>}
                   </tr>
                 </thead>

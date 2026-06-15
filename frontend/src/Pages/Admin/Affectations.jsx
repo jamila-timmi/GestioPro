@@ -29,6 +29,11 @@ const urlAvatar = (a) => {
   return '';
 };
 
+const dateInput = (d) => {
+  if (!d) return '';
+  return String(d).slice(0, 10);
+};
+
 const Affectations = () => {
   const app = useApp();
   const { user } = app.auth;
@@ -38,6 +43,7 @@ const Affectations = () => {
   const estAdmin = user?.role === 'admin';
 
   const [form, setForm] = useState({ employee_id: '', projet_id: '', role_projet: '', date_debut: '', date_fin: '' });
+  const [affectationEdit, setAffectationEdit] = useState(null);
   const [saving, setSaving] = useState(false);
   const [erreur, setErreur] = useState('');
 
@@ -56,6 +62,13 @@ const Affectations = () => {
     });
   };
 
+  const gererEdit = (e) => {
+    setAffectationEdit({
+      ...affectationEdit,
+      [e.target.name]: e.target.value,
+    });
+  };
+
   const soumettre = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -69,6 +82,39 @@ const Affectations = () => {
     setSaving(false);
   };
 
+  const ouvrirModification = (affectation) => {
+    setAffectationEdit({
+      id: affectation.id,
+      employee_id: affectation.employee_id || (affectation.employee ? affectation.employee.id : ''),
+      projet_id: affectation.projet_id || (affectation.projet ? affectation.projet.id : ''),
+      role_projet: affectation.role_projet || '',
+      date_debut: dateInput(affectation.date_debut),
+      date_fin: dateInput(affectation.date_fin),
+    });
+    setErreur('');
+  };
+
+  const confirmerModification = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setErreur('');
+    const id = affectationEdit.id;
+    const data = {
+      employee_id: affectationEdit.employee_id,
+      projet_id: affectationEdit.projet_id,
+      role_projet: affectationEdit.role_projet,
+      date_debut: affectationEdit.date_debut,
+      date_fin: affectationEdit.date_fin,
+    };
+    const res = await app.updateAffectation({ id, data });
+    if (res.ok) {
+      setAffectationEdit(null);
+    } else {
+      setErreur(res.payload ?? 'Erreur.');
+    }
+    setSaving(false);
+  };
+
   const supprimer = (id) => {
     if (window.confirm('Supprimer ?')) app.deleteAffectation(id);
   };
@@ -76,6 +122,55 @@ const Affectations = () => {
   return (
     <div className="d-flex" style={{ fontFamily: "'Segoe UI', sans-serif" }}>
       <Sidebar />
+
+      {affectationEdit && (
+        <div className="gp-modal-overlay" onClick={(e) => e.target === e.currentTarget && setAffectationEdit(null)}>
+          <div className="gp-modal" style={{ maxWidth: 440 }}>
+            <div className="d-flex justify-content-between align-items-center p-4 border-bottom">
+              <h5 className="mb-0 fw-bold">Modifier l'affectation</h5>
+              <button className="btn-close" onClick={() => setAffectationEdit(null)} />
+            </div>
+            <form onSubmit={confirmerModification} className="p-4">
+              {erreur && <div className="alert alert-danger py-2 mb-3" style={{ fontSize: 13 }}>{erreur}</div>}
+              <div className="row g-3">
+                <div className="col-12">
+                  <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Employé *</label>
+                  <select name="employee_id" className="form-select gp-input" value={affectationEdit.employee_id} onChange={gererEdit} required>
+                    <option value="">Choisir un employé</option>
+                    {listeEmployes.map((e) => <option key={e.id} value={e.id}>{e.nom} {e.prenom}</option>)}
+                  </select>
+                </div>
+                <div className="col-12">
+                  <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Projet *</label>
+                  <select name="projet_id" className="form-select gp-input" value={affectationEdit.projet_id} onChange={gererEdit} required>
+                    <option value="">Choisir un projet</option>
+                    {listeProjets.map((p) => <option key={p.id} value={p.id}>{p.nom}</option>)}
+                  </select>
+                </div>
+                <div className="col-12">
+                  <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Rôle *</label>
+                  <input name="role_projet" className="form-control gp-input" placeholder="Rôle dans le projet" value={affectationEdit.role_projet} onChange={gererEdit} required />
+                </div>
+                <div className="col-6">
+                  <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Date début *</label>
+                  <input name="date_debut" type="date" className="form-control gp-input" value={affectationEdit.date_debut} onChange={gererEdit} required />
+                </div>
+                <div className="col-6">
+                  <label className="form-label fw-semibold" style={{ fontSize: 12 }}>Date fin</label>
+                  <input name="date_fin" type="date" className="form-control gp-input" min={affectationEdit.date_debut} value={affectationEdit.date_fin} onChange={gererEdit} />
+                </div>
+              </div>
+              <div className="d-flex gap-2 mt-3">
+                <button type="button" className="btn btn-outline-secondary flex-fill" onClick={() => setAffectationEdit(null)}>Annuler</button>
+                <button type="submit" className="btn btn-primary flex-fill fw-semibold" disabled={saving}>
+                  {saving ? <><span className="spinner-border spinner-border-sm me-2" />...</> : 'Enregistrer'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <div className="gp-page flex-grow-1 p-4" style={{ minWidth: 0 }}>
         <div className="d-grid gap-4 align-items-start" style={{ gridTemplateColumns: estAdmin ? 'minmax(280px,340px) 1fr' : '1fr' }}>
 
@@ -136,7 +231,14 @@ const Affectations = () => {
                       </td>
                       <td style={{ fontSize: 13 }}>{a.role_projet || '—'}</td>
                       <td style={{ fontSize: 13 }}>{formaterDate(a.date_debut)} - {formaterDate(a.date_fin)}</td>
-                      {estAdmin && <td><button className="btn btn-supprimer btn-sm rounded-2" onClick={() => supprimer(a.id)}>Supprimer</button></td>}
+                      {estAdmin && (
+                        <td>
+                          <div className="d-flex gap-1">
+                            <button className="btn btn-modifier btn-sm rounded-2" onClick={() => ouvrirModification(a)}>Modifier</button>
+                            <button className="btn btn-supprimer btn-sm rounded-2" onClick={() => supprimer(a.id)}>Supprimer</button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
